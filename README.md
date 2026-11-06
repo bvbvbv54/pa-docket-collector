@@ -209,6 +209,7 @@ limited-access records must not be collected.
 - [`docs/UJS_ACCESS_FINDINGS.md`](docs/UJS_ACCESS_FINDINGS.md) — portal contract
 - [`docs/LIVE_READINESS.md`](docs/LIVE_READINESS.md) — gates and executed checks
 - [`docs/DEMO.md`](docs/DEMO.md) — end-to-end demonstration runbook
+- [`docs/FINAL_REPORT.md`](docs/FINAL_REPORT.md) — measured results and remaining blockers
 - [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) — measured limits
 - [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) — acceptance state
 - [`docs/ACCESS_POLICY.md`](docs/ACCESS_POLICY.md) — access policy
