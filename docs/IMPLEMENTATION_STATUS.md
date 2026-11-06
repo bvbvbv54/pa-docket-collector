@@ -74,3 +74,10 @@ This section supersedes earlier live-blocker entries above.
 - Source adapter and live job persistence/export remain incomplete, not certified end-to-end.
 - Evidence: ujs_workflow_20261106_145249.json and ujs_retrieval_sample.json under docs/validation.
 - GitHub delivery: BLOCKED — no remote configured; destination repository URL required.
+
+## GitHub delivery — 2026-11-06
+- PASS — Initial project pushed to https://github.com/bvbvbv54/pa-docket-collector on master, commit 7a7c104.
+- 98 project files included. Credential scan passed.
+- Excluded ignored local runtime data and raw search-results JSON/screenshot containing personal details and signed links.
+- Last regression run: 47 passed in 15.57s; Ruff all checks passed.
+- Publication does not resolve the HTTP 401 document-retrieval blocker or certify end-to-end completion.
