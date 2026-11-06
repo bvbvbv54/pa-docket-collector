@@ -214,3 +214,15 @@ This section supersedes earlier live-blocker entries above.
 - Excluded ignored local runtime data and raw search-results JSON/screenshot containing personal details and signed links.
 - Last regression run: 47 passed in 15.57s; Ruff all checks passed.
 - Publication does not resolve the HTTP 401 document-retrieval blocker or certify end-to-end completion.
+
+## Scenario expansion - 2026-11-07
+- PASS - Docket Number search mode driven through the rendered control; the input mounts as `input[name="DocketNumber"]`.
+- PASS - `pa-docket collect-dockets --docket MJ-51303-CR-0000199-2026`: fresh signed report, 72,558-byte PDF, 3 charges, job `27a10ba5-d345-4616-966b-66cc5de08836`.
+- PASS - `pa-docket refresh --docket MJ-51303-CR-0000199-2026`: document re-retrieved and compared; 0 revisions because the parsed record did not change (job `5731be74-6e05-4eb3-8ab3-e22af4ca1fdb`).
+- PASS - Revision history table and `DocketRevision` model shipped with Alembic `0003`; migration is idempotent against databases whose `0001` already built the table from model metadata.
+- PASS - Records service, `/records`, `/dockets/{number}`, `/api/records`, filtered CSV/XLSX exports, and stored-PDF download all read the same database.
+- PASS - Live check: `/records?county=Adams` 28 rows, docket page 200, PDF 200 `application/pdf`, filtered XLSX 8,550 bytes, filtered CSV 29 lines.
+- PASS - Full suite 98 passed; Ruff clean.
+- NOT EXECUTED - Lancaster 2026-10-01..31 full-month collection in this pass. Chronological partitioning, resume skip, and truncation evidence are covered by code and tests, not by a completed 31-day live job.
+- NOT DETECTED - CAPTCHA or edge anti-bot product on the Case Search landing page; probe evidence in `docs/validation/antibot_probe.json`, with the DOM "shape" hit recorded as a text false positive.
+

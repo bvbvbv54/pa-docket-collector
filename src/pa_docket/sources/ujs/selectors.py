@@ -21,6 +21,11 @@ COUNTY_SELECTOR = 'select[title="County"]'
 # Populated per county; the only subdivision available on a Date Filed search.
 COURT_OFFICE_SELECTOR = 'select[title="MDJS Court Office"]'
 
+# Docket Number mode. The input mounts when the search mode changes and is
+# visible without opening Advanced Search (probed live 2026-11-07).
+DOCKET_NUMBER_OPTION = "DocketNumber"
+DOCKET_NUMBER_INPUT = 'input[name="DocketNumber"]'
+
 # Results grid: a single static table with no pagination control.
 RESULT_GRID = "#caseSearchResultGrid"
 GRID_ROWS = "#caseSearchResultGrid tbody tr"

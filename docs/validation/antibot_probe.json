@@ -1,0 +1,115 @@
+{
+  "probed_at": "2026-11-06T23:07:19.117918+00:00",
+  "url": "https://ujsportal.pacourts.us/CaseSearch",
+  "network_mode": "proxy",
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+  "dns_or_proxy": "proxy",
+  "landing_status": 200,
+  "landing_headers": {},
+  "landing_header_fingerprints": [],
+  "cookie_names": [
+    ".AspNetCore.Antiforgery.SBFfOFqeTDE"
+  ],
+  "dom_fingerprints": [
+    "shape"
+  ],
+  "cookie_fingerprints": [],
+  "captcha_selectors_present": {
+    "iframe[src*='recaptcha']": 0,
+    "iframe[src*='hcaptcha']": 0,
+    "iframe[src*='turnstile']": 0,
+    "div.g-recaptcha": 0,
+    "div[class*='captcha' i]": 0,
+    "div[id*='captcha' i]": 0,
+    "#challenge-form": 0,
+    "#px-captcha": 0
+  },
+  "captcha_frame_urls": [],
+  "search_modes": [
+    {
+      "value": "",
+      "text": ""
+    },
+    {
+      "value": "AppellateCourtName",
+      "text": "Appellate"
+    },
+    {
+      "value": "Attorney",
+      "text": "Attorney"
+    },
+    {
+      "value": "CalendarEvent",
+      "text": "Calendar Event"
+    },
+    {
+      "value": "CitationNumber",
+      "text": "Citation Number"
+    },
+    {
+      "value": "ComplaintNumber",
+      "text": "Complaint Number"
+    },
+    {
+      "value": "DateFiled",
+      "text": "Date Filed"
+    },
+    {
+      "value": "DocketNumber",
+      "text": "Docket Number"
+    },
+    {
+      "value": "IncidentNumber",
+      "text": "Incident Number"
+    },
+    {
+      "value": "Organization",
+      "text": "Organization"
+    },
+    {
+      "value": "OTN",
+      "text": "OTN"
+    },
+    {
+      "value": "Parcel",
+      "text": "Parcel"
+    },
+    {
+      "value": "ParticipantName",
+      "text": "Participant Name"
+    },
+    {
+      "value": "SID",
+      "text": "SID"
+    }
+  ],
+  "docket_mode_inputs": [
+    {
+      "tag": "SELECT",
+      "id": null,
+      "name": null,
+      "title": "Search By",
+      "placeholder": null,
+      "type": null
+    },
+    {
+      "tag": "INPUT",
+      "id": null,
+      "name": "AdvanceSearch",
+      "title": "Advanced Search",
+      "placeholder": null,
+      "type": "checkbox"
+    },
+    {
+      "tag": "INPUT",
+      "id": null,
+      "name": "DocketNumber",
+      "title": "Docket Number",
+      "placeholder": null,
+      "type": "text"
+    }
+  ],
+  "docket_mode_body": "Skip to Content (Press Enter) Create New Account Login The Unified JUDICIAL SYSTEM of PENNSYLVANIA WEB PORTAL Unified Judicial System website UJS Forms PAePay\u00ae Brochure PAePay\u00ae Brochure (Espa\u00f1ol) Collections in the Courts Financial Records This navigation menu supports keyboard interaction. Screen reader users may need to switch modes to open submenus and navigate nested items. Home Case Information Pay Online Help & Support HomeCase Search Case Search Help If you are searching for appellate court cases, you must choose the \u2018Appellate\u2019 or \u2018Docket Number\u2019 option. Search By: Appellate Attorney Calendar Event Citation Number Complaint Number Date Filed Docket Number Incident Number Organization OTN Parcel Participant Name SID ? Advanced Search: Docket Number:? Search Clear Additional Info Help Center Privacy Policy Terms & Conditions Site Requirements This site requires a current browser with Javascript and cookies enabled to access our eServices properly. Other browsers and browsers without Javascript and cookies enabled will see graphical errors or may be denied access completely. Using a browser that supports TLS 1.2 or higher will be required to access the UJS Web Portal. The reporting functions on the site require Adobe Acrobat Reader. Please be advised that if you are running pop-up blockers, you may be unable to view all of the pages and reports on this site. Disclaimer The Unified Judicial System and its related personnel make no representation as to the accuracy, comple",
+  "title": "Case Search",
+  "body_excerpt": "Skip to Content (Press Enter) Create New Account Login The Unified JUDICIAL SYSTEM of PENNSYLVANIA WEB PORTAL Unified Judicial System website UJS Forms PAePay\u00ae Brochure PAePay\u00ae Brochure (Espa\u00f1ol) Collections in the Courts Financial Records This navigation menu supports keyboard interaction. Screen reader users may need to switch modes to open submenus and navigate nested items. Home Case Information Pay Online Help & Support HomeCase Search Case Search Help If you are searching for appellate court cases, you must choose the \u2018Appellate\u2019 or \u2018Docket Number\u2019 option. Search By: Appellate Attorney Calendar Event Citation Number Complaint Number Date Filed Docket Number Incident Number Organization OTN Parcel Participant Name SID ? Advanced Search: Docket Number:? Search Clear Additional Info Hel"
+}

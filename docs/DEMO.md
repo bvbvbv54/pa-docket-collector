@@ -96,3 +96,39 @@ appears in `/jobs/{id}`, and downloads both exports.
 
 Prints one block per docket with presence status and evidence section for each
 requested field.
+
+## Docket-number retrieval and refresh
+
+A known docket is searched in Docket Number mode, so the report URL is signed
+fresh on every retrieval:
+
+```powershell
+pa-docket collect-dockets --docket MJ-51303-CR-0000199-2026 --progress
+```
+
+Refresh re-searches each stored docket number, downloads the latest sheet,
+compares it with the stored record, and writes a revision only when a field
+actually moved:
+
+```powershell
+pa-docket refresh --docket MJ-51303-CR-0000199-2026 --progress
+pa-docket refresh --job JOB_ID --limit 50 --progress
+```
+
+A refresh that finds the same document and the same values writes no revision.
+The docket page prints the revision history when one exists.
+
+## Records page and filtered downloads
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn pa_docket.api.app:app --host 127.0.0.1 --port 8077
+```
+
+Then open `http://127.0.0.1:8077/records`. Filters: filing date range, county,
+charge text, disposition. `Download Excel` and `Download CSV` carry the same
+filters to `/api/exports/records.xlsx` and `/api/exports/records.csv`; both stream
+one row per charge and read the same query as the table.
+
+`/dockets/<docket-number>` shows the extracted fields, the charge table, the
+stored PDF link, and the revision history.
+

@@ -93,6 +93,31 @@ class SourceDocument(Base):
     retrieved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class DocketRevision(Base):
+    """One observed change to a stored docket, with both sides preserved.
+
+    A refresh never overwrites history silently: the previous record, the new
+    record and the fields that moved are kept together so an operator can show
+    what the court document said before and after.
+    """
+
+    __tablename__ = "docket_revisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    docket_id: Mapped[int] = mapped_column(ForeignKey("dockets.id", ondelete="CASCADE"), index=True)
+    job_id: Mapped[str | None] = mapped_column(ForeignKey("collection_jobs.id", ondelete="SET NULL"), index=True)
+    previous_document_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_documents.id", ondelete="SET NULL")
+    )
+    new_document_id: Mapped[int | None] = mapped_column(
+        ForeignKey("source_documents.id", ondelete="SET NULL")
+    )
+    previous_record_json: Mapped[dict[str, Any]] = mapped_column(JsonType, nullable=False)
+    new_record_json: Mapped[dict[str, Any]] = mapped_column(JsonType, nullable=False)
+    changed_fields: Mapped[list[str]] = mapped_column(JsonType, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class ExtractionResult(Base):
     __tablename__ = "extraction_results"
     __table_args__ = (

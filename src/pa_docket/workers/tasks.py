@@ -11,6 +11,7 @@ from pa_docket.db.models import (
     CollectionJob,
     CollectionPartition,
     Docket,
+    DocketRevision,
     ExtractionResult,
     SourceDocument,
     TaskQueue,
@@ -21,6 +22,68 @@ from pa_docket.parsers import NonCriminalDocketError, parse_docket_pdf
 from pa_docket.parsers.generic import MalformedPdfError
 from pa_docket.validation.service import validate_record
 from pa_docket.workers.queue import claim_lock, claim_one, recover_expired
+
+
+def _field_signature(field: dict | None) -> tuple:
+    if not isinstance(field, dict):
+        return (None, None)
+    return (field.get("normalized_value"), field.get("presence_status"))
+
+
+def _charge_map(record: dict) -> dict[tuple, dict]:
+    mapped: dict[tuple, dict] = {}
+    for charge in record.get("charges") or []:
+        key = (
+            charge.get("defendant_index"),
+            (charge.get("charge_number") or {}).get("normalized_value"),
+        )
+        mapped[key] = charge
+    return mapped
+
+
+def _changed_fields(previous: dict, current: dict) -> list[str]:
+    """Name the fields a refresh moved, field by field, charge by charge."""
+    changes: list[str] = []
+    for key in ("docket_number", "court", "county", "filing_date", "case_status"):
+        if _field_signature(previous.get(key)) != _field_signature(current.get(key)):
+            changes.append(key)
+    if _field_signature((previous.get("metadata") or {}).get("case_disposition")) != _field_signature(
+        (current.get("metadata") or {}).get("case_disposition")
+    ):
+        changes.append("case_disposition")
+
+    old_defendants = {d.get("index", 1): d for d in previous.get("defendants") or []}
+    new_defendants = {d.get("index", 1): d for d in current.get("defendants") or []}
+    for index in sorted(set(old_defendants) | set(new_defendants)):
+        for field in ("name", "race"):
+            if _field_signature((old_defendants.get(index) or {}).get(field)) != _field_signature(
+                (new_defendants.get(index) or {}).get(field)
+            ):
+                changes.append(f"defendant {index} {field}")
+
+    old_charges = _charge_map(previous)
+    new_charges = _charge_map(current)
+    for key in sorted(set(old_charges) | set(new_charges), key=str):
+        label = key[1] or f"#{key[0]}"
+        if key not in new_charges:
+            changes.append(f"charge {label} removed")
+            continue
+        if key not in old_charges:
+            changes.append(f"charge {label} added")
+            continue
+        for field in (
+            "description",
+            "statute",
+            "offense_date",
+            "arresting_officer",
+            "disposition",
+            "disposition_date",
+        ):
+            if _field_signature(old_charges[key].get(field)) != _field_signature(
+                new_charges[key].get(field)
+            ):
+                changes.append(f"charge {label} {field}")
+    return changes
 
 
 def _store_record(session, record, task: TaskQueue) -> None:
@@ -34,6 +97,16 @@ def _store_record(session, record, task: TaskQueue) -> None:
                 Docket.court == court if court is not None else Docket.court.is_(None),
             )
         ).first()
+    previous_record: dict | None = None
+    previous_document_id: int | None = None
+    if docket is not None:
+        previous_record = dict(docket.record_json or {})
+        prior_doc = session.scalars(
+            select(SourceDocument)
+            .where(SourceDocument.docket_id == docket.id)
+            .order_by(SourceDocument.id.desc())
+        ).first()
+        previous_document_id = prior_doc.id if prior_doc else None
     filed = date.fromisoformat(record.filing_date.normalized_value) if record.filing_date.normalized_value else None
     if docket_no and docket is None:
         docket = Docket(
@@ -107,6 +180,33 @@ def _store_record(session, record, task: TaskQueue) -> None:
         existing.source_document_id = source_doc.id
         existing.result_json = record.model_dump(mode="json")
         existing.validation_status = str(record.validation_status)
+    if docket is not None and previous_record:
+        current_record = record.model_dump(mode="json")
+        changed = _changed_fields(previous_record, current_record)
+        if changed:
+            session.add(
+                DocketRevision(
+                    docket_id=docket.id,
+                    job_id=task.job_id,
+                    previous_document_id=previous_document_id,
+                    new_document_id=source_doc.id,
+                    previous_record_json=previous_record,
+                    new_record_json=current_record,
+                    changed_fields=changed,
+                )
+            )
+            session.add(
+                AuditEvent(
+                    event_type="DOCKET_REVISED",
+                    job_id=task.job_id,
+                    details={
+                        "docket_number": docket_no,
+                        "changed_fields": changed[:50],
+                        "previous_document_id": previous_document_id,
+                        "new_document_id": source_doc.id,
+                    },
+                )
+            )
     session.add(
         AuditEvent(
             event_type="DOCKET_EXTRACTED",

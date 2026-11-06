@@ -1,7 +1,8 @@
 # PA UJS Docket Collector — Measured Results
 
-Prepared 2026-11-06. Every number below was read from the local database or the
-exported files produced by the commands shown. Nothing here is projected.
+Prepared 2026-11-06, extended 2026-11-07. Every number below was read from the
+local database or the exported files produced by the commands shown. Nothing
+here is projected.
 
 ## What was measured
 
@@ -11,12 +12,30 @@ exported files produced by the commands shown. Nothing here is projected.
 | Resumed run | `pa-docket collect-live --from 2026-11-04 --to 2026-11-06 --county Adams --limit 10 --resume-job e24feda7-… --enqueue-only` | 1 new partition (2026-11-06, 18 grid rows, 1 docket); no repeated work |
 | Final job state | job `e24feda7-7a51-4fc1-be56-8b4d5a3b6cd8` | 9 dockets, 28 charges, 121 grid rows, 3 `COMPLETE` partitions, 9/9 tasks |
 | Dashboard | `scripts/verify_dashboard.py e24feda7-…` | 200 OK, 9 docket numbers in HTML, 3 coverage rows, CSV 28 rows, XLSX 8,536 bytes (`PK`) |
-| Tests | `pytest tests -q` | 90 passed; `ruff check src tests scripts` clean |
+| Tests | `pytest tests -q` | 98 passed; `ruff check src tests scripts` clean |
 
 Job `e24feda7-…` was collected through the public portal with the production
 configuration (Chrome user agent, sticky proxy exit, HTTP/1.1).
 
-### Partition coverage
+## Scenario walkthrough (measured 2026-11-07)
+
+| Scenario | Run | Measured result |
+| --- | --- | --- |
+| 1. Yesterday's filings | `scripts/run_demo.py --from 2026-11-06 --to 2026-11-06 --county Adams --max-dockets 25` | job `d27c65e4-…`: 18 grid rows, 1 criminal docket, 16 non-criminal skipped, 3 charges, 1 `COMPLETE` partition, verdict `PASS`; CSV 3 rows, XLSX 3 rows. Race `PRESENT`; charge dispositions `MISSING` because the fresh sheet prints `Disposition:` blank |
+| 2. Whole month, chronological | `pa-docket collect-live --from 2026-10-01 --to 2026-10-31 --county Lancaster --progress` | Not executed end to end in this pass. Proven pieces: one partition per day in date order, `--resume-job` skips `COMPLETE`/`ZERO_RESULTS` partitions without searching, and the portal's truncation notice is stored as evidence and downgrades the partition to `PARTIAL` |
+| 3. One known docket | `pa-docket collect-dockets --docket MJ-51303-CR-0000199-2026 --progress` | job `27a10ba5-…`: docket-number search returned the row, a freshly signed report URL produced a 72,558-byte PDF, 3 charges extracted. `/dockets/MJ-51303-CR-0000199-2026` returns 200; `/api/documents/{id}` returns `application/pdf`, body starts `%PDF-` |
+| 4. Refresh existing dockets | `pa-docket refresh --docket MJ-51303-CR-0000199-2026 --progress` | job `5731be74-…`: PDF re-downloaded and compared to the stored record; 0 revisions written because no field changed. Storage now holds 4 document versions for the docket, all traced to separate jobs. The changed-field path (`Pending` → `Guilty`) is covered by `test_refresh_records_the_previous_and_current_disposition` |
+| 5. Filter plus export | `TestClient` against `data/pa_docket.sqlite3` | `/records?county=Adams` 200 with 28 charge rows; filtered CSV 29 lines including header; filtered XLSX 8,550 bytes starting `PK`. Store-wide: 70 charge rows, 27 of them with a non-`PRESENT` disposition |
+
+Scenario 3 and 4 both re-searched the docket number instead of reusing a stored
+report URL, so the URL arrives freshly signed by the portal on every retrieval.
+
+The records page and the filtered exports call one query (`services/records.py`);
+a filter typed on screen and the same filter in the downloaded file cannot
+diverge. `write_rows` writes every cell as text so a spreadsheet cannot execute a
+value.
+
+## Partition coverage
 
 | Filing date | County | Grid rows | Criminal dockets | Coverage |
 | --- | --- | ---: | ---: | --- |
@@ -97,6 +116,25 @@ Proven, with regression tests:
 - Partition `result_count` reports criminal dockets; the raw grid row count is
   kept separately in partition params.
 
+## Portal access controls observed
+
+Probed on 2026-11-07 with `scripts/probe_antibot.py` (evidence:
+`docs/validation/antibot_probe.json`), from the production configuration:
+
+- `https://ujsportal.pacourts.us/CaseSearch` returned **200**.
+- **No CAPTCHA was presented.** Zero recaptcha/hcaptcha/turnstile frames, zero
+  CAPTCHA selectors, no challenge form. The only cookie was
+  `.AspNetCore.Antiforgery.*`.
+- No edge-protection headers (`cf-ray`, `x-datadome`, `x-iinfo`, `_abck`) and no
+  `Retry-After` or rate-limit headers were returned.
+- The probe's DOM fingerprint matched the word "shape" in ordinary page copy.
+  That is a false positive; the refined reading is **no anti-bot product
+  detected** on the Case Search landing page.
+- During collection the portal answered every search and every report request at
+  the configured 10 requests/minute. If a CAPTCHA or block page ever appears, the
+  partition is recorded `FAILED`/`BLOCKED` with the page text as evidence and the
+  collector stops rather than attempting to solve or bypass it.
+
 ## Coverage limits and remaining blockers
 
 1. **Common Pleas truncation is not recoverable.** When a wide Date Filed search
@@ -125,6 +163,12 @@ Proven, with regression tests:
 ```powershell
 # full pipeline with integrity checks
 .\.venv\Scripts\python.exe scripts\run_demo.py --from 2026-11-04 --to 2026-11-05 --county Adams --max-dockets 10
+
+# one known docket: fresh search, fresh signed PDF, extraction
+pa-docket collect-dockets --docket MJ-51303-CR-0000199-2026 --progress
+
+# refresh it: re-retrieves the latest document and records any change
+pa-docket refresh --docket MJ-51303-CR-0000199-2026 --progress
 
 # field matrix for a stored job
 .\.venv\Scripts\python.exe scripts\verify_requested_fields.py JOB_ID

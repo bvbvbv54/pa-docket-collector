@@ -52,6 +52,8 @@ from pa_docket.sources.ujs.selectors import (
     DATE_FIELD_OPTION,
     DATE_FROM_INPUT,
     DATE_TO_INPUT,
+    DOCKET_NUMBER_INPUT,
+    DOCKET_NUMBER_OPTION,
     GRID_ROWS,
     RESULT_GRID,
     SEARCH_BUTTON,
@@ -105,6 +107,21 @@ class GridRow:
 
 
 @dataclass
+class DocketLookup:
+    """One docket-number search and the row the portal returned for it."""
+
+    docket_number: str
+    found: bool = False
+    row: GridRow | None = None
+    rows: list[GridRow] = field(default_factory=list)
+    notice: str | None = None
+    pages_visited: int = 0
+    errors: list[str] = field(default_factory=list)
+    coverage_status: str = COVERAGE_ZERO
+    body_excerpt: str = ""
+
+
+@dataclass
 class PartitionResult:
     """One search window and everything the portal returned for it."""
 
@@ -155,6 +172,19 @@ def _notice_courts(notice: str) -> list[str]:
 
 def _docket_sort_key(value: str) -> str:
     return value.strip()
+
+
+def parse_us_date(value: str | None) -> date | None:
+    """Parse the portal's MM/DD/YYYY grid date; never guess."""
+    if not value:
+        return None
+    parts = value.strip().split("/")
+    if len(parts) != 3:
+        return None
+    try:
+        return date(int(parts[2]), int(parts[0]), int(parts[1]))
+    except ValueError:
+        return None
 
 
 class UJSPortalSource:
@@ -472,6 +502,74 @@ class UJSPortalSource:
         return result
 
     @staticmethod
+    def _normalize_docket_number(value: str) -> str:
+        return " ".join(value.upper().split())
+
+    async def lookup_docket(self, docket_number: str) -> DocketLookup:
+        """Search by docket number and return the portal's own row for it.
+
+        This is the re-entry point for a known docket: it produces a fresh signed
+        report URL, which a stored URL cannot be relied on to provide later.
+        """
+        await self._require_ready()
+        target = self._normalize_docket_number(docket_number)
+        lookup = DocketLookup(docket_number=target)
+        page = await self._ensure_page()
+        try:
+            await page.locator(SEARCH_MODE_SELECTOR).select_option(DOCKET_NUMBER_OPTION)
+            await page.wait_for_timeout(1_000)
+            field = page.locator(DOCKET_NUMBER_INPUT)
+            await field.wait_for(state="visible", timeout=20_000)
+            await field.fill(target)
+            await page.locator(SEARCH_BUTTON).click()
+            lookup.pages_visited = 1
+            await page.wait_for_function(
+                """
+                selector => {
+                    const body = document.body ? document.body.innerText : '';
+                    if (/no results/i.test(body)) return true;
+                    const table = document.querySelector(selector);
+                    return !!(table && table.querySelector('tbody tr'));
+                }
+                """,
+                arg=RESULT_GRID,
+                timeout=DEFAULT_TIMEOUT_MS,
+            )
+            await self._wait_for_grid(page)
+            rows, notice, body = await self._read_grid(page)
+        except Exception as exc:
+            detail = redact(str(exc), self.settings)
+            lookup.errors.append(f"{classify_error(exc)}: {detail[:300]}")
+            lookup.coverage_status = COVERAGE_FAILED
+            await self._drop_session()
+            return lookup
+
+        lookup.rows = rows
+        lookup.notice = notice
+        lookup.body_excerpt = " ".join(body.split())[:500]
+        match = next(
+            (
+                row
+                for row in rows
+                if self._normalize_docket_number(row.docket_number) == target
+            ),
+            None,
+        )
+        if match is None:
+            if not rows or "no results" in body.casefold():
+                lookup.coverage_status = COVERAGE_ZERO
+            else:
+                lookup.coverage_status = COVERAGE_FAILED
+                lookup.errors.append(
+                    "Search returned rows but none matched the requested docket number"
+                )
+            return lookup
+        lookup.row = match
+        lookup.found = True
+        lookup.coverage_status = COVERAGE_COMPLETE
+        return lookup
+
+    @staticmethod
     def _dedupe(results: Iterable[PartitionResult]) -> list[GridRow]:
         seen: dict[str, GridRow] = {}
         for result in results:
@@ -572,8 +670,27 @@ class UJSPortalSource:
     async def search(self, query: SearchQuery) -> SearchResult:
         await self._require_ready()
         if query.docket_number:
-            raise LiveAccessNotValidatedError(
-                "Docket-number search is not implemented; date-ranged collection is."
+            lookup = await self.lookup_docket(query.docket_number)
+            row = lookup.row
+            dockets = (
+                [
+                    DocketRef(
+                        docket_number=row.docket_number,
+                        court_type=row.court_type or None,
+                        county=row.county or None,
+                        filing_date=parse_us_date(row.filing_date),
+                        detail_url=row.detail_url,
+                    )
+                ]
+                if row is not None
+                else []
+            )
+            return SearchResult(
+                dockets=dockets,
+                pages_visited=lookup.pages_visited,
+                pagination_complete=lookup.found,
+                coverage_status=lookup.coverage_status,
+                errors=lookup.errors,
             )
         if not query.date_from:
             raise LiveAccessNotValidatedError("A filing date is required.")

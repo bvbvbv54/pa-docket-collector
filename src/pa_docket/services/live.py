@@ -8,6 +8,7 @@ successful navigation.
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
@@ -19,6 +20,8 @@ from pa_docket.db.models import (
     AuditEvent,
     CollectionJob,
     CollectionPartition,
+    Docket,
+    ExtractionResult,
     TaskQueue,
 )
 from pa_docket.documents.storage import InvalidPdfError
@@ -32,6 +35,7 @@ from pa_docket.sources.ujs.source import (
     PortalStructureError,
     PortalUnreachableError,
     UJSPortalSource,
+    parse_us_date,
 )
 
 
@@ -45,6 +49,8 @@ class LiveStats:
     documents_stored: int = 0
     documents_failed: int = 0
     duplicates: int = 0
+    dockets_requested: int = 0
+    dockets_not_found: int = 0
     coverage_gaps: list[str] = field(default_factory=list)
     failures: list[str] = field(default_factory=list)
 
@@ -58,9 +64,16 @@ class LiveStats:
             "documents_stored": self.documents_stored,
             "documents_failed": self.documents_failed,
             "duplicates": self.duplicates,
+            "dockets_requested": self.dockets_requested,
+            "dockets_not_found": self.dockets_not_found,
             "coverage_gaps": self.coverage_gaps,
             "failures": self.failures,
         }
+
+
+def _progress(enabled: bool, message: str) -> None:
+    if enabled:
+        print(message, file=sys.stderr, flush=True)
 
 
 def _partition_status(result: PartitionResult) -> str:
@@ -212,7 +225,7 @@ def _queued_dockets(session_factory, job_id: str) -> set[str]:
 def _enqueue_document(
     session_factory,
     job_id: str,
-    partition_id: int,
+    partition_id: int | None,
     ref: DocketRef,
     document,
 ) -> None:
@@ -275,6 +288,7 @@ async def collect_live(
     max_dockets: int | None = None,
     resume_job_id: str | None = None,
     source: UJSPortalSource | None = None,
+    progress: bool = False,
 ) -> LiveStats:
     """Run one live collection job and return its accounting.
 
@@ -332,6 +346,11 @@ async def collect_live(
     owned = source is None
     portal = source or UJSPortalSource(settings)
     seen: set[str] = set()
+    _progress(
+        progress,
+        f"job={stats.job_id} range={date_from.isoformat()}..{date_to.isoformat()} "
+        f"counties={','.join(county_list) or 'ALL'} skipped_partitions={len(skip)}",
+    )
     try:
         if owned:
             await portal.open()
@@ -403,6 +422,18 @@ async def collect_live(
                     downloaded=downloaded_here,
                     skipped_for_limit=skipped_for_limit,
                 )
+                _progress(
+                    progress,
+                    f"[{result.filing_date.isoformat()} {result.county}] "
+                    f"{_partition_status(result) if not skipped_for_limit else 'PARTIAL'} "
+                    f"grid={len(result.rows)} criminal={len(result.criminal_rows)} "
+                    f"downloaded={downloaded_here} total={stats.documents_stored}"
+                    + (
+                        f" notice={result.truncated_notice[:80]}"
+                        if result.truncated_notice
+                        else ""
+                    ),
+                )
             except Exception as exc:
                 # Unexpected failure inside a partition: seal it FAILED so a
                 # crash is never read as open coverage, then let the job finalize.
@@ -419,3 +450,159 @@ async def collect_live(
             await portal.close()
         _finish_job(session_factory, stats.job_id, stats)
     return stats
+
+
+def stored_docket_numbers(
+    session_factory,
+    *,
+    job_id: str | None = None,
+    docket_numbers: Iterable[str] | None = None,
+    limit: int | None = None,
+) -> list[str]:
+    """Resolve the dockets a refresh should revisit.
+
+    Explicit numbers win. Otherwise every docket stored for the job (or every
+    docket in the database when no job is named) is refreshed once.
+    """
+    explicit = [
+        " ".join(str(number).upper().split())
+        for number in (docket_numbers or [])
+        if number and str(number).strip()
+    ]
+    if explicit:
+        numbers = list(dict.fromkeys(explicit))
+    else:
+        with session_factory() as session:
+            statement = select(Docket.docket_number).distinct()
+            if job_id:
+                statement = statement.join(
+                    ExtractionResult, ExtractionResult.docket_id == Docket.id
+                ).where(ExtractionResult.job_id == job_id)
+            numbers = [
+                number
+                for number in session.scalars(statement.order_by(Docket.docket_number))
+                if number
+            ]
+    return numbers[:limit] if limit else numbers
+
+
+async def collect_dockets(
+    session_factory,
+    settings: Settings,
+    docket_numbers: Iterable[str],
+    *,
+    job_kind: str = "ujs-docket",
+    extra_params: dict | None = None,
+    source: UJSPortalSource | None = None,
+    progress: bool = False,
+) -> LiveStats:
+    """Retrieve and enqueue extraction for a named set of docket numbers.
+
+    Every number is re-searched in Docket Number mode so the report URL is
+    freshly signed; a stored URL is never trusted to still resolve.
+    """
+    numbers = list(
+        dict.fromkeys(
+            " ".join(str(number).upper().split())
+            for number in docket_numbers
+            if number and str(number).strip()
+        )
+    )
+    if not numbers:
+        raise ValueError("At least one docket number is required")
+    params = {
+        "source": job_kind,
+        "docket_numbers": numbers,
+        **(extra_params or {}),
+    }
+    stats = LiveStats(job_id=_start_job(session_factory, settings, params))
+    stats.dockets_requested = len(numbers)
+    owned = source is None
+    portal = source or UJSPortalSource(settings)
+    _progress(progress, f"job={stats.job_id} dockets={len(numbers)}")
+    try:
+        if owned:
+            await portal.open()
+        for number in numbers:
+            try:
+                lookup = await portal.lookup_docket(number)
+            except Exception as exc:
+                stats.documents_failed += 1
+                stats.failures.append(f"{number}: LOOKUP_FAILED: {type(exc).__name__}: {exc}"[:300])
+                _progress(progress, f"[{number}] LOOKUP_FAILED")
+                continue
+            if not lookup.found:
+                stats.dockets_not_found += 1
+                stats.documents_failed += 1
+                stats.failures.append(
+                    f"{number}: NOT_FOUND: {(lookup.body_excerpt or '; '.join(lookup.errors))[:200]}"
+                )
+                _progress(progress, f"[{number}] NOT_FOUND")
+                continue
+            row = lookup.row
+            if row is None:
+                stats.documents_failed += 1
+                stats.failures.append(f"{number}: NO_GRID_ROW")
+                continue
+            ref = DocketRef(
+                docket_number=row.docket_number,
+                court_type=row.court_type or None,
+                county=row.county or None,
+                filing_date=parse_us_date(row.filing_date),
+                detail_url=row.detail_url,
+            )
+            try:
+                document = await portal.get_document(ref)
+            except (
+                PortalUnreachableError,
+                PortalStructureError,
+                InvalidPdfError,
+                OSError,
+            ) as exc:
+                stats.documents_failed += 1
+                stats.failures.append(f"{number}: {type(exc).__name__}: {exc}"[:300])
+                _progress(progress, f"[{number}] FETCH_FAILED {type(exc).__name__}")
+                continue
+            _enqueue_document(session_factory, stats.job_id, None, ref, document)
+            stats.documents_stored += 1
+            stats.criminal_dockets += 1
+            _progress(
+                progress,
+                f"[{number}] RETRIEVED county={row.county} filed={row.filing_date} "
+                f"stored={stats.documents_stored}",
+            )
+    finally:
+        if owned:
+            await portal.close()
+        _finish_job(session_factory, stats.job_id, stats)
+    return stats
+
+
+async def refresh_dockets(
+    session_factory,
+    settings: Settings,
+    *,
+    job_id: str | None = None,
+    docket_numbers: Iterable[str] | None = None,
+    limit: int | None = None,
+    source: UJSPortalSource | None = None,
+    progress: bool = False,
+) -> LiveStats:
+    """Re-retrieve stored dockets and let the worker record any revisions."""
+    numbers = stored_docket_numbers(
+        session_factory, job_id=job_id, docket_numbers=docket_numbers, limit=limit
+    )
+    if not numbers:
+        raise LookupError("No stored dockets match the refresh request")
+    with session_factory() as session:
+        if job_id and session.get(CollectionJob, job_id) is None:
+            raise LookupError(f"job not found: {job_id}")
+    return await collect_dockets(
+        session_factory,
+        settings,
+        numbers,
+        job_kind="ujs-refresh",
+        extra_params={"refresh_of_job": job_id, "limit": limit},
+        source=source,
+        progress=progress,
+    )

@@ -48,6 +48,23 @@ def _parser() -> argparse.ArgumentParser:
     )
     live.add_argument("--enqueue-only", action="store_true")
     live.add_argument("--workers", type=int)
+    live.add_argument("--progress", action="store_true")
+    dockets = sub.add_parser(
+        "collect-dockets", help="Retrieve named criminal dockets by docket number"
+    )
+    dockets.add_argument("--docket", action="append", required=True)
+    dockets.add_argument("--enqueue-only", action="store_true")
+    dockets.add_argument("--workers", type=int)
+    dockets.add_argument("--progress", action="store_true")
+    refresh = sub.add_parser(
+        "refresh", help="Re-retrieve stored dockets and record revisions"
+    )
+    refresh.add_argument("--job", help="Refresh every docket stored for this job")
+    refresh.add_argument("--docket", action="append", default=[])
+    refresh.add_argument("--limit", type=int)
+    refresh.add_argument("--enqueue-only", action="store_true")
+    refresh.add_argument("--workers", type=int)
+    refresh.add_argument("--progress", action="store_true")
     imp = sub.add_parser("import-pdfs", help="Import locally supplied PDF docket sheets")
     imp.add_argument("path", type=Path)
     imp.add_argument("--enqueue-only", action="store_true")
@@ -143,10 +160,59 @@ def main(argv: list[str] | None = None) -> int:
                     counties=args.county,
                     max_dockets=args.limit,
                     resume_job_id=args.resume_job,
+                    progress=args.progress,
                 )
             )
         except Exception as exc:
             print(f"collection failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(stats.as_dict(), indent=2))
+        if not args.enqueue_only:
+            run_worker(session_factory, settings, concurrency=args.workers or settings.max_parse_workers)
+            _show_status(session_factory, stats.job_id)
+        return 0 if not stats.failures else 1
+    if args.command == "collect-dockets":
+        import asyncio
+        import json
+
+        from pa_docket.services.live import collect_dockets
+
+        try:
+            stats = asyncio.run(
+                collect_dockets(
+                    session_factory,
+                    settings,
+                    args.docket,
+                    progress=args.progress,
+                )
+            )
+        except Exception as exc:
+            print(f"docket retrieval failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(stats.as_dict(), indent=2))
+        if not args.enqueue_only:
+            run_worker(session_factory, settings, concurrency=args.workers or settings.max_parse_workers)
+            _show_status(session_factory, stats.job_id)
+        return 0 if not stats.failures else 1
+    if args.command == "refresh":
+        import asyncio
+        import json
+
+        from pa_docket.services.live import refresh_dockets
+
+        try:
+            stats = asyncio.run(
+                refresh_dockets(
+                    session_factory,
+                    settings,
+                    job_id=args.job,
+                    docket_numbers=args.docket,
+                    limit=args.limit,
+                    progress=args.progress,
+                )
+            )
+        except Exception as exc:
+            print(f"refresh failed: {type(exc).__name__}: {exc}", file=sys.stderr)
             return 1
         print(json.dumps(stats.as_dict(), indent=2))
         if not args.enqueue_only:
