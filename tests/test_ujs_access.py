@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import date
 
 import pytest
 
 from pa_docket.config import Settings
-from pa_docket.sources.base import AccessStatus, SearchQuery
-from pa_docket.sources.ujs import source as ujs_source
+from pa_docket.sources.base import SearchQuery
 from pa_docket.sources.ujs.access import CASE_SEARCH_URL, probe_direct
 from pa_docket.sources.ujs.source import (
     LiveAccessNotValidatedError,
-    PortalUnreachableError,
     UJSPortalSource,
 )
 
@@ -56,43 +54,45 @@ def test_access_probe_forces_empty_proxy_map(monkeypatch):
     assert result.http_status == 200
 
 
-def test_ujs_source_rejects_proxy_mode_without_network_access(tmp_path, monkeypatch):
+def test_ujs_source_reports_proxy_route_as_configured(tmp_path):
+    settings = Settings(
+        network_mode="proxy",
+        storage_dir=tmp_path,
+        proxy_server="http://gw.dataimpulse.com:823",
+        proxy_username="user",
+        proxy_password="secret",
+    )
+    result = asyncio.run(UJSPortalSource(settings).check_access())
+    assert result.status == "CONFIGURED"
+    assert "page reachability is proven" in result.detail
+
+
+def test_ujs_source_blocks_on_incomplete_proxy_configuration(tmp_path):
     settings = Settings(network_mode="proxy", storage_dir=tmp_path)
-    source = UJSPortalSource(settings)
-    result = asyncio.run(source.check_access())
+    result = asyncio.run(UJSPortalSource(settings).check_access())
     assert result.status == "BLOCKED"
-    assert "direct connections only" in result.detail
+    assert "Proxy configuration rejected" in result.detail
 
 
-def test_ujs_operations_fail_with_clear_guidance_when_unreachable(tmp_path, monkeypatch):
-    settings = Settings(network_mode="direct", storage_dir=tmp_path)
-    source = UJSPortalSource(settings)
-    monkeypatch.setattr(
-        ujs_source,
-        "probe_direct",
-        lambda *_args: AccessStatus(
-            status="UNREACHABLE",
-            checked_at=datetime.now(UTC).isoformat(),
-            url=CASE_SEARCH_URL,
-            detail="direct route unavailable",
-        ),
+def test_live_search_is_refused_until_the_recorded_evidence_is_complete(tmp_path):
+    settings = Settings(
+        network_mode="proxy",
+        storage_dir=tmp_path,
+        live_collection_enabled=True,
+        live_access_approved=True,
+        proxy_server="http://gw.dataimpulse.com:823",
+        proxy_username="user",
+        proxy_password="secret",
     )
-    with pytest.raises(PortalUnreachableError, match="deploy only from a network permitted"):
-        asyncio.run(source.search(SearchQuery(docket_number="not-a-real-docket")))
+    with pytest.raises(LiveAccessNotValidatedError, match="validation evidence is incomplete"):
+        asyncio.run(
+            UJSPortalSource(settings).search(SearchQuery(date_from=date(2026, 11, 5)))
+        )
 
 
-def test_reachability_alone_does_not_enable_search(tmp_path, monkeypatch):
+def test_live_operations_stay_disabled_without_operator_approval(tmp_path):
     settings = Settings(network_mode="direct", storage_dir=tmp_path)
-    source = UJSPortalSource(settings)
-    monkeypatch.setattr(
-        ujs_source,
-        "probe_direct",
-        lambda *_args: AccessStatus(
-            status="ACCESSIBLE",
-            checked_at=datetime.now(UTC).isoformat(),
-            url=CASE_SEARCH_URL,
-            http_status=200,
-        ),
-    )
-    with pytest.raises(LiveAccessNotValidatedError, match="Live collection remains disabled"):
-        asyncio.run(source.search(SearchQuery(docket_number="not-a-real-docket")))
+    with pytest.raises(LiveAccessNotValidatedError, match="Live collection is disabled"):
+        asyncio.run(
+            UJSPortalSource(settings).search(SearchQuery(date_from=date(2026, 11, 5)))
+        )

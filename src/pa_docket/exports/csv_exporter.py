@@ -23,6 +23,7 @@ COLUMNS = [
     "charge_disposition",
     "disposition_date",
     "case_status",
+    "case_disposition",
     "source_url",
     "retrieved_at",
     "validation_status",
@@ -45,6 +46,7 @@ def _safe_cell(value: object) -> str:
 
 def rows_for_record(record: dict) -> Iterator[list[str]]:
     defendants = {int(d.get("index", 1)): d for d in record.get("defendants", [])}
+    metadata = record.get("metadata") or {}
     common = [
         _value(record.get("docket_number")),
         _value(record.get("court")),
@@ -64,6 +66,7 @@ def rows_for_record(record: dict) -> Iterator[list[str]]:
             _value(charge.get("disposition"), raw=True),
             _value(charge.get("disposition_date")),
             _value(record.get("case_status"), raw=True),
+            _value(metadata.get("case_disposition"), raw=True),
             record.get("source_pdf_url") or "",
             record.get("retrieved_at") or "",
             record.get("validation_status") or "",

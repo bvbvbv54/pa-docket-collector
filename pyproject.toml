@@ -45,3 +45,7 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
+[tool.ruff.lint.per-file-ignores]
+# The parser fixtures are verbatim PDF text layouts; line width is part of the data.
+"tests/test_ujs_parser.py" = ["E501"]
+

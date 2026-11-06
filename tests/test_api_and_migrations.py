@@ -45,6 +45,22 @@ def test_api_requires_login_and_processes_fixture_job(tmp_path, monkeypatch):
         jobs = client.get("/api/jobs")
         assert jobs.status_code == 200
         assert any(job["id"] == job_id and job["status"] == "COMPLETED" for job in jobs.json())
+
+        detail = client.get(f"/api/jobs/{job_id}")
+        assert detail.status_code == 200
+        body = detail.json()
+        assert body["docket_count"] == 1
+        assert body["charge_row_count"] >= 1
+        assert body["document_count"] == 1
+        assert body["dockets"][0]["docket_number"] == "MD-01-CR-0000123-2025"
+        assert body["dockets"][0]["charges"]
+        assert body["coverage"] and body["coverage"][0]["coverage_status"]
+
+        page = client.get(f"/jobs/{job_id}")
+        assert page.status_code == 200
+        assert "MD-01-CR-0000123-2025" in page.text
+        assert "Case disposition" in page.text
+
         csv_response = client.get(f"/api/exports/{job_id}/csv")
         assert csv_response.status_code == 200
         assert csv_response.text.startswith("docket_number,court_type,county,filing_date")

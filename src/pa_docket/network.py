@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+from secrets import token_hex
 from urllib.parse import quote, urlsplit
 
 from pa_docket.config import Settings
@@ -30,7 +31,12 @@ class NetworkConfigurationError(ValueError):
     """Messages contain configuration keys only, never values."""
 
 
-def browser_proxy(settings: Settings) -> dict[str, str] | None:
+def new_proxy_session_id(prefix: str = "pdc") -> str:
+    """Short sticky-session tag; provider keeps one exit IP per tag."""
+    return prefix + "-" + token_hex(6)
+
+
+def browser_proxy(settings: Settings, session_id: str | None = None) -> dict[str, str] | None:
     mode = settings.network_mode.strip().lower()
     if mode not in {"direct", "proxy"}:
         raise NetworkConfigurationError("INVALID_NETWORK_MODE")
@@ -62,8 +68,11 @@ def browser_proxy(settings: Settings) -> dict[str, str] | None:
         raise NetworkConfigurationError("INVALID_PROXY_COUNTRY")
     username = settings.proxy_username
     # Official provider syntax: https://docs.dataimpulse.com/proxies/parameters/state
-    if parsed.hostname == "gw.dataimpulse.com" and "__" not in username:
-        username += "__cr." + settings.proxy_country.lower()
+    if parsed.hostname == "gw.dataimpulse.com":
+        if "__cr." not in username:
+            username += "__cr." + settings.proxy_country.lower()
+        if session_id and ";sessid." not in username:
+            username += ";sessid." + session_id
     return {"server": server, "username": username, "password": settings.proxy_password}
 
 

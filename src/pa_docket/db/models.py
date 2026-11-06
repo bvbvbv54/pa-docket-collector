@@ -95,6 +95,11 @@ class SourceDocument(Base):
 
 class ExtractionResult(Base):
     __tablename__ = "extraction_results"
+    __table_args__ = (
+        # One extraction per docket per job: a restart re-downloads the sheet and
+        # must replace the row, never append a second export line.
+        UniqueConstraint("job_id", "docket_id", name="uq_extraction_job_docket"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     docket_id: Mapped[int | None] = mapped_column(ForeignKey("dockets.id", ondelete="CASCADE"), index=True)

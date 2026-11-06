@@ -5,6 +5,7 @@ import hmac
 import io
 import os
 import tempfile
+from html import escape
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
@@ -20,6 +21,7 @@ from pa_docket.db.session import init_db, make_session_factory
 from pa_docket.exports.csv_exporter import COLUMNS, iter_export_rows
 from pa_docket.exports.xlsx_exporter import write_xlsx
 from pa_docket.services.jobs import create_fixture_job, list_jobs
+from pa_docket.services.reporting import coverage_gaps, job_summary
 from pa_docket.sources.fixture.source import FixtureSource
 
 settings = Settings.from_env()
@@ -87,7 +89,8 @@ def dashboard(_username: str = Depends(require_auth)):
     with SessionFactory() as session:
         jobs = list_jobs(session, limit=20)
     rows = "".join(
-        f"<tr><td>{job.id}</td><td>{job.status}</td><td>{job.completed_tasks}/{job.total_tasks}</td></tr>"
+        f"<tr><td><a href='/jobs/{job.id}'>{job.id}</a></td><td>{job.status}</td>"
+        f"<td>{job.completed_tasks}/{job.total_tasks}</td></tr>"
         for job in jobs
     )
     return HTMLResponse(f"""<!doctype html><title>PA Docket Collector</title>
@@ -170,28 +173,68 @@ def api_jobs(_username: str = Depends(require_auth)):
 @app.get("/api/jobs/{job_id}")
 def api_job(job_id: str, _username: str = Depends(require_auth)):
     with SessionFactory() as session:
-        job = session.get(CollectionJob, job_id)
-        if not job:
-            raise HTTPException(404, "Job not found")
-        return {
-            "id": job.id,
-            "status": job.status,
-            "params": job.params,
-            "total_tasks": job.total_tasks,
-            "completed_tasks": job.completed_tasks,
-            "failed_tasks": job.failed_tasks,
-        }
+        summary = job_summary(session, job_id)
+    if summary is None:
+        raise HTTPException(404, "Job not found")
+    return summary
 
 
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)
 def job_page(job_id: str, _username: str = Depends(require_auth)):
     with SessionFactory() as session:
-        job = session.get(CollectionJob, job_id)
-        if not job:
-            raise HTTPException(404, "Job not found")
-        return HTMLResponse(
-            f"<h1>Job {job.id}</h1><p>Status: {job.status}</p><p>Progress: {job.completed_tasks}/{job.total_tasks}</p>"
-        )
+        summary = job_summary(session, job_id)
+    if summary is None:
+        raise HTTPException(404, "Job not found")
+    gaps = coverage_gaps(summary)
+    rows = "".join(
+        "<tr>"
+        f"<td>{escape(d['docket_number'] or '')}</td>"
+        f"<td>{escape(d['county'] or '')}</td>"
+        f"<td>{escape(d['filing_date'] or '')}</td>"
+        f"<td>{escape(d['defendant_name'] or '')}</td>"
+        f"<td>{escape(d['defendant_race'] or d['race_presence'])}</td>"
+        f"<td>{escape(d['case_status'] or '')}</td>"
+        f"<td>{escape(d['case_disposition'] or '')}</td>"
+        f"<td>{d['charge_count']}</td>"
+        f"<td>{escape(d['validation_status'] or '')}</td>"
+        "</tr>"
+        for d in summary["dockets"]
+    )
+    coverage = "".join(
+        "<li>"
+        f"{escape(c['filing_date'] or '')} {escape(c['county'] or '')} "
+        f"{escape(c['court_type'] or '')}: {escape(c['coverage_status'])} "
+        f"({c['result_count']} rows, {c['pages_visited']} page(s))"
+        "</li>"
+        for c in summary["coverage"]
+    )
+    gap_block = (
+        "<h2>Coverage gaps</h2><ul>"
+        + "".join(f"<li>{escape(gap)}</li>" for gap in gaps)
+        + "</ul>"
+        if gaps
+        else "<p>Coverage: every partition reported COMPLETE.</p>"
+    )
+    return HTMLResponse(
+        f"""<!doctype html><title>Job {escape(summary['id'])}</title>
+      <h1>Job {escape(summary['id'])}</h1>
+      <p>Status: {escape(summary['status'] or '')}</p>
+      <p>Progress: {summary['completed_tasks']}/{summary['total_tasks']} tasks,
+         {summary['failed_tasks']} failed</p>
+      <p>Records: {summary['docket_count']} dockets,
+         {summary['charge_row_count']} charge rows,
+         {summary['document_count']} stored PDFs</p>
+      <p><a href='/api/exports/{escape(summary['id'])}/csv'>CSV</a>
+         <a href='/api/exports/{escape(summary['id'])}/xlsx'>XLSX</a>
+         <a href='/api/jobs/{escape(summary['id'])}'>JSON</a></p>
+      {gap_block}
+      <h2>Partitions</h2><ul>{coverage}</ul>
+      <h2>Dockets</h2>
+      <table><thead><tr><th>Docket</th><th>County</th><th>Filed</th><th>Defendant</th>
+      <th>Race</th><th>Case status</th><th>Case disposition</th><th>Charges</th>
+      <th>Validation</th></tr></thead><tbody>{rows}</tbody></table>
+      <form method='post' action='/logout'><button>Log out</button></form>"""
+    )
 
 
 @app.get("/api/exports/{job_id}/csv")

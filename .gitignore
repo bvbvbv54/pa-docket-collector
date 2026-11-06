@@ -15,3 +15,18 @@ build/
 # Raw live search results contain personal data and signed document URLs.
 docs/validation/ujs_workflow_20261106_145249.json
 docs/validation/ujs_date_form_20261106_145249.png
+docs/validation/ujs_results_*
+docs/validation/ujs_docket_popup.png
+docs/validation/ujs_casesearch_*.png
+docs/validation/ujs_form_controls.json
+docs/validation/session_evidence.json
+docs/validation/proxy_exit_*.json
+docs/validation/ujs_access_*.json
+
+# Local artifacts and operator notes.
+exports/
+test.md
+
+# Captured portal assets, kept for local inspection only.
+docs/validation/help_casesearch.html
+docs/validation/sitemain.min.js

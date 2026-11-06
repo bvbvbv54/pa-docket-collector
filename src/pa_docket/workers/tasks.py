@@ -17,7 +17,7 @@ from pa_docket.db.models import (
 )
 from pa_docket.documents.storage import InvalidPdfError, validate_pdf_bytes
 from pa_docket.domain.enums import ValidationStatus
-from pa_docket.parsers import GenericParser
+from pa_docket.parsers import NonCriminalDocketError, parse_docket_pdf
 from pa_docket.parsers.generic import MalformedPdfError
 from pa_docket.validation.service import validate_record
 from pa_docket.workers.queue import claim_lock, claim_one, recover_expired
@@ -83,15 +83,30 @@ def _store_record(session, record, task: TaskQueue) -> None:
         )
         session.add(source_doc)
         session.flush()
-    session.add(
-        ExtractionResult(
-            docket_id=docket_id,
-            source_document_id=source_doc.id,
-            job_id=task.job_id,
-            result_json=record.model_dump(mode="json"),
-            validation_status=str(record.validation_status),
+    existing = session.scalars(
+        select(ExtractionResult).where(
+            ExtractionResult.job_id == task.job_id,
+            ExtractionResult.docket_id == docket_id,
         )
-    )
+    ).first()
+    if existing is None:
+        session.add(
+            ExtractionResult(
+                docket_id=docket_id,
+                source_document_id=source_doc.id,
+                job_id=task.job_id,
+                result_json=record.model_dump(mode="json"),
+                validation_status=str(record.validation_status),
+            )
+        )
+    else:
+        # One extraction per docket per job. A restart that re-downloads the same
+        # docket produces a fresh PDF (the portal re-signs it, so the bytes and
+        # their hash move) and must not append a second export row; the newest
+        # document becomes the evidence pointer for the existing result.
+        existing.source_document_id = source_doc.id
+        existing.result_json = record.model_dump(mode="json")
+        existing.validation_status = str(record.validation_status)
     session.add(
         AuditEvent(
             event_type="DOCKET_EXTRACTED",
@@ -121,7 +136,7 @@ def process_one(session_factory, settings, worker_id: str, *, max_attempts: int 
     try:
         data = Path(payload["storage_path"]).read_bytes()
         validate_pdf_bytes(data)
-        record = validate_record(GenericParser().parse(data, source_url=payload.get("source_url")))
+        record = validate_record(parse_docket_pdf(data, source_url=payload.get("source_url")))
         expected_docket = payload.get("expected_docket_number")
         if expected_docket and record.docket_number.normalized_value != expected_docket:
             record.validation_errors.append(
@@ -137,6 +152,16 @@ def process_one(session_factory, settings, worker_id: str, *, max_attempts: int 
             task.status = "COMPLETED"
             task.lease_until = None
             task.last_error = None
+            _finalize_job(session, job_id)
+        return True
+    except NonCriminalDocketError as exc:
+        # A civil or landlord/tenant docket is out of scope, not a failed read.
+        with session_factory() as session, session.begin():
+            task = session.get(TaskQueue, task_id)
+            if task:
+                task.status = "CANCELLED"
+                task.last_error = f"NON_CRIMINAL_DOCKET: {exc}"[:2000]
+                task.lease_until = None
             _finalize_job(session, job_id)
         return True
     except Exception as exc:
@@ -173,9 +198,15 @@ def _finalize_job(session, job_id: str) -> None:
     partitions = list(session.scalars(select(CollectionPartition).where(CollectionPartition.job_id == job_id)))
     for partition in partitions:
         partition_tasks = [t for t in tasks if t.partition_id == partition.id]
+        # Coverage belongs to collection, not to extraction. A partition that
+        # was closed as PARTIAL because a docket limit stopped the download
+        # stays PARTIAL no matter how many of the queued dockets parsed. Only a
+        # partition collection never closed is sealed here from task outcomes.
+        if partition.coverage_status != "IN_PROGRESS":
+            continue
         if partition_tasks and all(t.status in {"COMPLETED", "FAILED", "CANCELLED"} for t in partition_tasks):
             partition.completed_at = datetime.now(UTC)
-            partition.pagination_complete = True
+            partition.pagination_complete = False
             partition.coverage_status = (
                 "COMPLETE" if all(t.status == "COMPLETED" for t in partition_tasks) else "PARTIAL"
             )
@@ -187,7 +218,10 @@ def _finalize_job(session, job_id: str) -> None:
         job.completed_at = None
         return
     job.completed_at = datetime.now(UTC)
-    if job.failed_tasks:
+    coverage_incomplete = any(
+        partition.coverage_status not in {"COMPLETE", "ZERO_RESULTS"} for partition in partitions
+    )
+    if job.failed_tasks or coverage_incomplete:
         job.status = "PARTIAL" if job.completed_tasks else "FAILED"
     else:
         validation_states = [

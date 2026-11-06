@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, date, datetime
+
 import pymupdf
 from openpyxl import load_workbook
 from sqlalchemy import func, select
@@ -8,12 +10,14 @@ from pa_docket.config import Settings
 from pa_docket.db.models import (
     ChargeRow,
     CollectionJob,
+    CollectionPartition,
     Docket,
     ExtractionResult,
     SourceDocument,
     TaskQueue,
 )
 from pa_docket.db.session import init_db, make_session_factory
+from pa_docket.documents.storage import store_pdf
 from pa_docket.exports.csv_exporter import COLUMNS, csv_bytes, iter_export_rows
 from pa_docket.exports.xlsx_exporter import write_xlsx
 from pa_docket.services.jobs import create_fixture_job
@@ -76,6 +80,47 @@ def test_fixture_pipeline_is_idempotent_and_exports_actual_values(tmp_path):
     assert excel_rows[0][8] == "Simple assault"
 
 
+def test_extraction_never_upgrades_a_partial_partition_or_job(tmp_path):
+    """Coverage is sealed by collection; parsing every queued docket cannot close a gap."""
+    settings, engine, factory = setup_db(tmp_path)
+    case = sample_cases()[1]
+    job_id = create_fixture_job(factory, settings, [(case, render_pdf(case))], {"source": "fixture"})
+    with factory() as session, session.begin():
+        task = session.scalars(select(TaskQueue).where(TaskQueue.job_id == job_id)).one()
+        partition = CollectionPartition(
+            job_id=job_id,
+            filing_date=date(2026, 11, 5),
+            county="Lancaster",
+            court_type="Magisterial District",
+            params={"filing_date": "2026-11-05", "county": "Lancaster"},
+            started_at=datetime.now(UTC),
+            completed_at=datetime.now(UTC),
+            result_count=58,
+            pages_visited=1,
+            pagination_complete=False,
+            coverage_status="PARTIAL",
+            errors=["Docket limit reached: 1 of 58 criminal dockets downloaded, 57 not retrieved"],
+        )
+        session.add(partition)
+        session.flush()
+        task.partition_id = partition.id
+
+    run_worker(factory, settings, concurrency=1)
+
+    with factory() as session:
+        partition = session.scalars(
+            select(CollectionPartition).where(
+                CollectionPartition.job_id == job_id,
+                CollectionPartition.coverage_status == "PARTIAL",
+            )
+        ).one()
+        assert partition.pagination_complete is False
+        assert partition.errors
+        job = session.get(CollectionJob, job_id)
+        assert job.status == "PARTIAL"
+        assert job.completed_tasks == job.total_tasks
+
+
 def test_same_pdf_rerun_does_not_duplicate_docket_charges_or_document(tmp_path):
     settings, engine, factory = setup_db(tmp_path)
     case = sample_cases()[0]
@@ -91,6 +136,43 @@ def test_same_pdf_rerun_does_not_duplicate_docket_charges_or_document(tmp_path):
         assert session.scalar(select(func.count()).select_from(ExtractionResult)) == 2
         assert session.get(CollectionJob, first).status == "COMPLETED"
         assert session.get(CollectionJob, second).status == "COMPLETED"
+
+
+def test_restart_redownloading_the_same_docket_replaces_its_result(tmp_path):
+    """A restart re-signs the PDF, so the bytes change; the export row must not."""
+    settings, engine, factory = setup_db(tmp_path)
+    case = sample_cases()[0]
+    first_data = render_pdf(case)
+    job_id = create_fixture_job(factory, settings, [(case, first_data)], {"run": 1})
+    run_worker(factory, settings, concurrency=1)
+
+    pdf = pymupdf.open(stream=first_data, filetype="pdf")
+    pdf[0].insert_text((48, 780), "re-signed", fontsize=8)
+    second_data = pdf.tobytes()
+    pdf.close()
+    digest, path = store_pdf(second_data, settings.storage_dir)
+    with factory() as session, session.begin():
+        session.add(
+            TaskQueue(
+                job_id=job_id,
+                task_type="EXTRACT_PDF",
+                payload={
+                    "docket_number": case.docket_number,
+                    "document_hash": digest,
+                    "storage_path": str(path),
+                    "source_url": None,
+                    "byte_count": len(second_data),
+                },
+            )
+        )
+    run_worker(factory, settings, concurrency=1)
+
+    with factory() as session:
+        assert session.scalar(select(func.count()).select_from(SourceDocument)) == 2
+        assert session.scalar(select(func.count()).select_from(ExtractionResult)) == 1
+        rows = list(iter_export_rows(session, job_id))
+        assert len(rows) == 1
+        assert session.scalar(select(func.count()).select_from(ChargeRow)) == 1
 
 
 def test_modified_pdf_creates_a_new_document_version_for_same_docket(tmp_path):

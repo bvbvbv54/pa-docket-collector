@@ -37,6 +37,17 @@ def _parser() -> argparse.ArgumentParser:
     collect.add_argument("--docket")
     collect.add_argument("--enqueue-only", action="store_true")
     collect.add_argument("--workers", type=int)
+    live = sub.add_parser("collect-live", help="Collect docket sheets from the UJS portal")
+    live.add_argument("--from", dest="date_from", type=_date, required=True)
+    live.add_argument("--to", dest="date_to", type=_date, required=True)
+    live.add_argument("--county", action="append", default=[])
+    live.add_argument("--limit", type=int)
+    live.add_argument(
+        "--resume-job",
+        help="Continue an existing job; partitions already complete are skipped",
+    )
+    live.add_argument("--enqueue-only", action="store_true")
+    live.add_argument("--workers", type=int)
     imp = sub.add_parser("import-pdfs", help="Import locally supplied PDF docket sheets")
     imp.add_argument("path", type=Path)
     imp.add_argument("--enqueue-only", action="store_true")
@@ -56,6 +67,9 @@ def _parser() -> argparse.ArgumentParser:
     status.add_argument("job_id")
     resume = jobs_sub.add_parser("resume")
     resume.add_argument("job_id")
+    serve = sub.add_parser("serve", help="Run the authenticated dashboard and API")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
     export = sub.add_parser("export", help="Export a job to CSV or XLSX")
     export.add_argument("--job", required=True)
     export.add_argument("--format", choices=["csv", "xlsx"], required=True)
@@ -76,6 +90,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"database: ok ({engine.dialect.name})")
         print(f"storage: ok ({settings.storage_dir.resolve()})")
         print(f"live_collection: {'enabled and approved' if settings.live_ready else 'disabled'}")
+        findings_path = settings.storage_dir / "ujs_access_findings.json"
+        if findings_path.exists():
+            import json as _json
+
+            findings = _json.loads(findings_path.read_text(encoding="utf-8"))
+            required = ("selectors_verified", "search_flow_validated", "pdf_delivery_validated")
+            state = ", ".join(f"{key}={findings.get(key)}" for key in required)
+            print(f"live_evidence: {state}")
+        else:
+            print(f"live_evidence: missing ({findings_path})")
+        print(f"network_mode: {settings.network_mode}")
+        print(f"rate_limit_rpm: {settings.requests_per_minute}")
         return 0
     if args.command == "collect":
         if args.docket:
@@ -98,6 +124,35 @@ def main(argv: list[str] | None = None) -> int:
             run_worker(session_factory, settings, concurrency=args.workers or settings.max_parse_workers)
             _show_status(session_factory, job_id)
         return 0
+    if args.command == "collect-live":
+        import asyncio
+        import json
+
+        from pa_docket.services.live import collect_live
+
+        if args.date_from > args.date_to:
+            print("--from must not be after --to", file=sys.stderr)
+            return 2
+        try:
+            stats = asyncio.run(
+                collect_live(
+                    session_factory,
+                    settings,
+                    date_from=args.date_from,
+                    date_to=args.date_to,
+                    counties=args.county,
+                    max_dockets=args.limit,
+                    resume_job_id=args.resume_job,
+                )
+            )
+        except Exception as exc:
+            print(f"collection failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(stats.as_dict(), indent=2))
+        if not args.enqueue_only:
+            run_worker(session_factory, settings, concurrency=args.workers or settings.max_parse_workers)
+            _show_status(session_factory, stats.job_id)
+        return 0 if not stats.failures else 1
     if args.command in {"import-pdfs", "import-dockets"}:
         if args.command == "import-pdfs":
             paths = list(args.path.rglob("*.pdf")) if args.path.is_dir() else [args.path]
@@ -140,8 +195,19 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
             print(f"job_id={args.job_id} reset_tasks={count}")
             return 0
+    if args.command == "serve":
+        import uvicorn
+
+        uvicorn.run(
+            "pa_docket.api.app:app",
+            host=args.host,
+            port=args.port,
+            log_level="info",
+        )
+        return 0
     if args.command == "export":
         output = args.output or Path(f"{args.job}.{args.format}")
+        output.parent.mkdir(parents=True, exist_ok=True)
         with session_factory() as session:
             job = session.get(CollectionJob, args.job)
             if not job:

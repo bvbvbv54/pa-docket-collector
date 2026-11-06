@@ -21,6 +21,10 @@ class Settings:
     proxy_username: str | None = field(default=None, repr=False)
     proxy_password: str | None = field(default=None, repr=False)
     proxy_country: str = "US"
+    browser_user_agent: str = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36"
+    )
     live_collection_enabled: bool = False
     live_access_approved: bool = False
     operator_username: str | None = None
@@ -41,6 +45,11 @@ class Settings:
                 10, max(1, int(os.getenv("RATE_LIMIT_RPM", os.getenv("REQUESTS_PER_MINUTE", "10"))))) ,
             network_mode=os.getenv("NETWORK_MODE", "direct").strip().lower(),
             proxy_country=os.getenv("PROXY_COUNTRY", "US").strip().upper(),
+            browser_user_agent=os.getenv(
+                "BROWSER_USER_AGENT",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+            ),
             proxy_server=os.getenv("PROXY_SERVER") or None,
             proxy_username=os.getenv("PROXY_USERNAME") or None,
             proxy_password=os.getenv("PROXY_PASSWORD") or None,
