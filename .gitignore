@@ -1,0 +1,17 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.py[cod]
+data/
+artifacts/
+*.sqlite3
+*.db
+dist/
+build/
+
+
+# Raw live search results contain personal data and signed document URLs.
+docs/validation/ujs_workflow_20261106_145249.json
+docs/validation/ujs_date_form_20261106_145249.png

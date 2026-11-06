@@ -1,0 +1,116 @@
+{
+  "timestamp": "20261106_145035",
+  "search_submitted": false,
+  "pdf_count": 0,
+  "status": "TERMS_REVIEW_REQUIRED",
+  "terms_href": "../Home/Terms",
+  "terms_text": "Skip to Content (Press Enter)\nCreate New Account\nLogin\nThe Unified JUDICIAL\nSYSTEM of PENNSYLVANIA\nWEB PORTAL\nUnified Judicial System website\nUJS Forms\nPAePay\u00ae Brochure\nPAePay\u00ae Brochure (Espa\u00f1ol)\nCollections in the Courts\nFinancial Records\n\nThis navigation menu supports keyboard interaction. Screen reader users may need to switch modes to open submenus and navigate nested items.\n\nHome\nCase Information\nPay Online\nHelp & Support\nHomeTerms & Conditions\nTerms & Conditions\n\nThe use of this system, as with all Internet usage, may pose a risk of damage to user computer systems because of the presence of computer viruses, software and hardware incompatibility or defects, and other factors associated with the use of the Internet. Users of this system assume all risks associated with its use, including the risk that damage may occur to user computer systems, software or data stored on or contained in user computer systems. The AOPC will not be liable to any party for any direct, indirect, special, incidental, consequential, or other damages based upon any use of this payment system or use of any Web site to which this site is linked.\n\nThe AOPC disclaims all responsibility and liability for any damages, including loss of use, loss of profits, business interruption, procurement of substitute goods or services, and loss of revenues caused by any failure of performance, error, omission, interruption, deletion, defect, delay in operation or transmission of information or data, communication line failure, computer virus, theft, destruction, unauthorized access or alteration regardless of whether for negligence, breach of contract, or any other cause of action.\n\nHelp Center\nPrivacy Policy\nTerms & Conditions\nSite Requirements\n\nThis site requires a current browser with Javascript and cookies enabled to access our eServices properly. Other browsers and browsers without Javascript and cookies enabled will see graphical errors or may be denied access completely. Using a browser that supports TLS 1.2 or higher will be required to access the UJS Web Portal. The reporting functions on the site require Adobe Acrobat Reader. Please be advised that if you are running pop-up blockers, you may be unable to view all of the pages and reports on this site.\n\nDisclaimer\n\nThe Unified Judicial System and its related personnel make no representation as to the accuracy, completeness, or utility, and assume no liability for any general or specific use of the information provided herein. Recent entries made in the court offices may not be immediately reflected on this site. Any case or payment plan that includes one or more cases marked as limited access cannot be paid online using PAePay as these cases are no longer publicly available and are not permitted to be visible on the UJS web portal. Contact the court wherein your case was filed or payment plan was set up if you have questions regarding alternative payment arrangements. Periodically, secure login accounts will be deactivated due to a lack of use for a minimum period of six months. To re-activate a secure account, a new login request form signed by the appropriate county official must be submitted.\n\n\u00a9 Copyright 2005 - 2026 Administrative Office of Pennsylvania Courts. All Rights Reserved.",
+  "visible_controls": [
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "name": "",
+      "outer": "<button aria-controls=\"CaseInformation-ChildMenu\" aria-expanded=\"false\" aria-haspopup=\"true\" role=\"menuitem\">Case Information</button>",
+      "options": []
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "name": "",
+      "outer": "<button aria-controls=\"PayOnline-ChildMenu\" aria-expanded=\"false\" aria-haspopup=\"true\" role=\"menuitem\">Pay Online</button>",
+      "options": []
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "name": "",
+      "outer": "<button aria-controls=\"HelpSupport-ChildMenu\" aria-expanded=\"false\" aria-haspopup=\"true\" role=\"menuitem\">Help &amp; Support</button>",
+      "options": []
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "name": "",
+      "outer": "<select data-aopc-control-to-find=\"True\" required=\"true\" title=\"Search By\"><option data-aopc-blankvalue=\"(blank)\" data-aopc-sortorder=\"0\" value=\"\">&nbsp;</option><option value=\"AppellateCourtName\">Appellate</option><option value=\"Attorney\">Attorney</option><option value=\"CalendarEvent\">Calendar Event</option><option value=\"CitationNumber\">Citation Number</option><option value=\"ComplaintNumber\">Complaint Number</option><option value=\"DateFiled\">Date Filed</option><option value=\"DocketNumber\">Dock",
+      "options": [
+        {
+          "text": "\u00a0",
+          "value": ""
+        },
+        {
+          "text": "Appellate",
+          "value": "AppellateCourtName"
+        },
+        {
+          "text": "Attorney",
+          "value": "Attorney"
+        },
+        {
+          "text": "Calendar Event",
+          "value": "CalendarEvent"
+        },
+        {
+          "text": "Citation Number",
+          "value": "CitationNumber"
+        },
+        {
+          "text": "Complaint Number",
+          "value": "ComplaintNumber"
+        },
+        {
+          "text": "Date Filed",
+          "value": "DateFiled"
+        },
+        {
+          "text": "Docket Number",
+          "value": "DocketNumber"
+        },
+        {
+          "text": "Incident Number",
+          "value": "IncidentNumber"
+        },
+        {
+          "text": "Organization",
+          "value": "Organization"
+        },
+        {
+          "text": "OTN",
+          "value": "OTN"
+        },
+        {
+          "text": "Parcel",
+          "value": "Parcel"
+        },
+        {
+          "text": "Participant Name",
+          "value": "ParticipantName"
+        },
+        {
+          "text": "SID",
+          "value": "SID"
+        }
+      ]
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "name": "",
+      "outer": "<button aria-label=\"Help for SearchBy\" class=\"learn-more-icon\" command=\"show-modal\" data-aopc-bubbletext=\"&lt;p&gt;For legal and technical reasons, some case and calendar event information will not display in search results even if the correct search terms are entered. This includes, but is not limited to, juvenile cases, expunged cases, limited access cases (Act 5 of 2016), and civil cases in the Courts of Common Pleas.&lt;/p&gt;\" data-aopc-bubbletitle=\"Search By\" data-aopc-dialog-id=\"9e5cb875-",
+      "options": []
+    },
+    {
+      "tag": "BUTTON",
+      "id": "btnSearch",
+      "name": "",
+      "outer": "<button id=\"btnSearch\" value=\"Search\">Search</button>",
+      "options": []
+    },
+    {
+      "tag": "BUTTON",
+      "id": "btnReset",
+      "name": "",
+      "outer": "<button id=\"btnReset\" type=\"Reset\" value=\"Clear\">Clear</button>",
+      "options": []
+    }
+  ]
+}

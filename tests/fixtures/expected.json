@@ -1,0 +1,38 @@
+{
+  "MD-01-CR-0000123-2025.pdf": {
+    "docket_number": "MD-01-CR-0000123-2025",
+    "defendant_names": [
+      "Jordan Example"
+    ],
+    "charge_count": 1
+  },
+  "MD-02-CR-0000124-2025.pdf": {
+    "docket_number": "MD-02-CR-0000124-2025",
+    "defendant_names": [
+      "Casey Sample"
+    ],
+    "charge_count": 3
+  },
+  "CP-03-CR-0000789-2025.pdf": {
+    "docket_number": "CP-03-CR-0000789-2025",
+    "defendant_names": [
+      "Morgan Demo",
+      "Riley Fixture"
+    ],
+    "charge_count": 2
+  },
+  "MD-01-CR-0000200-2025.pdf": {
+    "docket_number": "MD-01-CR-0000200-2025",
+    "defendant_names": [
+      "Single Charge"
+    ],
+    "charge_count": 1
+  },
+  "MD-01-CR-0000201-2025.pdf": {
+    "docket_number": "MD-01-CR-0000201-2025",
+    "defendant_names": [
+      "Affiant Example"
+    ],
+    "charge_count": 1
+  }
+}

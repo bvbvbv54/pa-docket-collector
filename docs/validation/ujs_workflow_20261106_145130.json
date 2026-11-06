@@ -1,0 +1,136 @@
+{
+  "timestamp": "20261106_145130",
+  "search_submitted": false,
+  "pdf_count": 0,
+  "status": "DATE_FORM_DISCOVERED",
+  "form_text": "Skip to Content (Press Enter)\nCreate New Account\nLogin\nThe Unified JUDICIAL\nSYSTEM of PENNSYLVANIA\nWEB PORTAL\nUnified Judicial System website\nUJS Forms\nPAePay\u00ae Brochure\nPAePay\u00ae Brochure (Espa\u00f1ol)\nCollections in the Courts\nFinancial Records\n\nThis navigation menu supports keyboard interaction. Screen reader users may need to switch modes to open submenus and navigate nested items.\n\nHome\nCase Information\nPay Online\nHelp & Support\nHomeCase Search\nCase Search\nHelp\nIf you are searching for appellate court cases, you must choose the \u2018Appellate\u2019 or \u2018Docket Number\u2019 option.\nSearch By:\n\u00a0\nAppellate\nAttorney\nCalendar Event\nCitation Number\nComplaint Number\nDate Filed\nDocket Number\nIncident Number\nOrganization\nOTN\nParcel\nParticipant Name\nSID\n?\nAdvanced Search:\nDate Filed Start Date:\nDate Filed End Date:\nSearch Clear\nAdditional Info\nHelp Center\nPrivacy Policy\nTerms & Conditions\nSite Requirements\n\nThis site requires a current browser with Javascript and cookies enabled to access our eServices properly. Other browsers and browsers without Javascript and cookies enabled will see graphical errors or may be denied access completely. Using a browser that supports TLS 1.2 or higher will be required to access the UJS Web Portal. The reporting functions on the site require Adobe Acrobat Reader. Please be advised that if you are running pop-up blockers, you may be unable to view all of the pages and reports on this site.\n\nDisclaimer\n\nThe Unified Judicial System and its related personnel make no representation as to the accuracy, completeness, or utility, and assume no liability for any general or specific use of the information provided herein. Recent entries made in the court offices may not be immediately reflected on this site. Any case or payment plan that includes one or more cases marked as limited access cannot be paid online using PAePay as these cases are no longer publicly available and are not permitted to be visible on the UJS web portal. Contact the court wherein your case was filed or payment plan was set up if you have questions regarding alternative payment arrangements. Periodically, secure login accounts will be deactivated due to a lack of use for a minimum period of six months. To re-activate a secure account, a new login request form signed by the appropriate county official must be submitted.\n\n\u00a9 Copyright 2005 - 2026 Administrative Office of Pennsylvania Courts. All Rights Reserved.",
+  "visible_controls": [
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "name": "",
+      "outer": "<button aria-controls=\"CaseInformation-ChildMenu\" aria-expanded=\"false\" aria-haspopup=\"true\" role=\"menuitem\">Case Information</button>",
+      "options": []
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "name": "",
+      "outer": "<button aria-controls=\"PayOnline-ChildMenu\" aria-expanded=\"false\" aria-haspopup=\"true\" role=\"menuitem\">Pay Online</button>",
+      "options": []
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "name": "",
+      "outer": "<button aria-controls=\"HelpSupport-ChildMenu\" aria-expanded=\"false\" aria-haspopup=\"true\" role=\"menuitem\">Help &amp; Support</button>",
+      "options": []
+    },
+    {
+      "tag": "SELECT",
+      "id": "",
+      "name": "",
+      "outer": "<select data-aopc-control-to-find=\"True\" required=\"true\" title=\"Search By\"><option data-aopc-blankvalue=\"(blank)\" data-aopc-sortorder=\"0\" value=\"\">&nbsp;</option><option value=\"AppellateCourtName\">Appellate</option><option value=\"Attorney\">Attorney</option><option value=\"CalendarEvent\">Calendar Event</option><option value=\"CitationNumber\">Citation Number</option><option value=\"ComplaintNumber\">Complaint Number</option><option value=\"DateFiled\">Date Filed</option><option value=\"DocketNumber\">Docket Number</option><option value=\"IncidentNumber\">Incident Number</option><option value=\"Organization\">Organization</option><option value=\"OTN\">OTN</option><option value=\"Parcel\">Parcel</option><option value=\"ParticipantName\">Participant Name</option><option value=\"SID\">SID</option></select>",
+      "options": [
+        {
+          "text": "\u00a0",
+          "value": ""
+        },
+        {
+          "text": "Appellate",
+          "value": "AppellateCourtName"
+        },
+        {
+          "text": "Attorney",
+          "value": "Attorney"
+        },
+        {
+          "text": "Calendar Event",
+          "value": "CalendarEvent"
+        },
+        {
+          "text": "Citation Number",
+          "value": "CitationNumber"
+        },
+        {
+          "text": "Complaint Number",
+          "value": "ComplaintNumber"
+        },
+        {
+          "text": "Date Filed",
+          "value": "DateFiled"
+        },
+        {
+          "text": "Docket Number",
+          "value": "DocketNumber"
+        },
+        {
+          "text": "Incident Number",
+          "value": "IncidentNumber"
+        },
+        {
+          "text": "Organization",
+          "value": "Organization"
+        },
+        {
+          "text": "OTN",
+          "value": "OTN"
+        },
+        {
+          "text": "Parcel",
+          "value": "Parcel"
+        },
+        {
+          "text": "Participant Name",
+          "value": "ParticipantName"
+        },
+        {
+          "text": "SID",
+          "value": "SID"
+        }
+      ]
+    },
+    {
+      "tag": "BUTTON",
+      "id": "",
+      "name": "",
+      "outer": "<button aria-label=\"Help for SearchBy\" class=\"learn-more-icon\" command=\"show-modal\" data-aopc-bubbletext=\"&lt;p&gt;For legal and technical reasons, some case and calendar event information will not display in search results even if the correct search terms are entered. This includes, but is not limited to, juvenile cases, expunged cases, limited access cases (Act 5 of 2016), and civil cases in the Courts of Common Pleas.&lt;/p&gt;\" data-aopc-bubbletitle=\"Search By\" data-aopc-dialog-id=\"9f17b3a5-5ab8-456b-8da1-8718ca6d0d3a\" type=\"button\" value=\"Help for SearchBy\">?</button>",
+      "options": []
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "name": "AdvanceSearch",
+      "outer": "<input data-aopc-control-to-find=\"True\" data-aopc-displayif=\"[{&quot;SearchBy&quot;:&quot;AppellateCourtName&quot;},{&quot;SearchBy&quot;:&quot;Attorney&quot;},{&quot;SearchBy&quot;:&quot;DateFiled&quot;},{&quot;SearchBy&quot;:&quot;CitationNumber&quot;},{&quot;SearchBy&quot;:&quot;DocketNumber&quot;},{&quot;SearchBy&quot;:&quot;DriversLicense&quot;},{&quot;SearchBy&quot;:&quot;FID&quot;},{&quot;SearchBy&quot;:&quot;OTN&quot;},{&quot;SearchBy&quot;:&quot;Organization&quot;},{&quot;SearchBy&quot;:&quot;PABarNumber&quot;},{&quot;SearchBy&quot;:&quot;Parcel&quot;},{&quot;SearchBy&quot;:&quot;ParticipantName&quot;},{&quot;SearchBy&quot;:&quot;ComplaintNumber&quot;},{&quot;SearchBy&quot;:&quot;IncidentNumber&quot;},{&quot;SearchBy&quot;:&quot;SID&quot;},{&quot;SearchBy&quot;:&quot;SSN&quot;},{&quot;SearchBy&quot;:&quot;AttorneyCalendarEvent&quot;}]\" name=\"AdvanceSearch\" title=\"Advanced Search\" type=\"checkbox\" value=\"true\" style=\"\">",
+      "options": []
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "name": "FiledStartDate",
+      "outer": "<input data-aopc-control-to-find=\"True\" data-aopc-defaultmax=\"FiledEndDate-Control\" data-aopc-defaultmin=\"1899-01-01\" data-aopc-displayif=\"[{&quot;SearchBy&quot;:&quot;AppellateCourtName&quot;},{&quot;SearchBy&quot;:&quot;DateFiled&quot;},{&quot;SearchBy&quot;:&quot;Attorney&quot;},{&quot;SearchBy&quot;:&quot;Organization&quot;},{&quot;SearchBy&quot;:&quot;ParticipantName&quot;}]\" data-aopc-maxallowedlimit=\"180\" data-aopc-maxotherproperty=\"FiledEndDate\" data-aopc-maxrangeif=\"[{&quot;SearchBy&quot;:&quot;DateFiled&quot;}]\" data-aopc-maxunits=\"days\" data-aopc-require-one-of=\"[{&quot;SearchBy&quot;:&quot;ParticipantName&quot;},{&quot;SearchBy&quot;:&quot;Organization&quot;},{&quot;SearchBy&quot;:&quot;Attorney&quot;}]\" data-aopc-requiredif=\"[{&quot;SearchBy&quot;:&quot;DateFiled&quot;},{&quot;SearchBy&quot;:&quot;Attorney&quot;,&quot;CalendarEventStartDate&quot;:&quot;&quot;},{&quot;SearchBy&quot;:&quot;Attorney&quot;,&quot;CalendarEventEndDate&quot;:&quot;&quot;},{&quot;SearchBy&quot;:&quot;Organization&quot;,&quot;County&quot;:&quot;&quot;,&quot;CaseCategory&quot;:&quot;&quot;,&quot;CaseStatus&quot;:&quot;&quot;,&quot;DocketType&quot;:&quot;&quot;},{&quot;SearchBy&quot;:&quot;ParticipantName&quot;,&quot;County&quot;:&quot;&quot;,&quot;CaseStatus&quot;:&quot;&quot;,&quot;DocketType&quot;:&quot;&quot;}]\" name=\"FiledStartDate\" placeholder=\"mm/dd/yyyy\" title=\"Date Filed Start Date\" type=\"date\" min=\"1899-01-01\" max=\"2026-11-06\" required=\"required\" style=\"\">",
+      "options": []
+    },
+    {
+      "tag": "INPUT",
+      "id": "",
+      "name": "FiledEndDate",
+      "outer": "<input data-aopc-control-to-find=\"True\" data-aopc-datepickermode=\"Past\" data-aopc-defaultmax=\"2026-11-06\" data-aopc-defaultmin=\"1899-01-01\" data-aopc-displayif=\"[{&quot;SearchBy&quot;:&quot;AppellateCourtName&quot;},{&quot;SearchBy&quot;:&quot;DateFiled&quot;},{&quot;SearchBy&quot;:&quot;Attorney&quot;},{&quot;SearchBy&quot;:&quot;Organization&quot;},{&quot;SearchBy&quot;:&quot;ParticipantName&quot;}]\" data-aopc-require-one-of=\"[{&quot;SearchBy&quot;:&quot;ParticipantName&quot;},{&quot;SearchBy&quot;:&quot;Organization&quot;},{&quot;SearchBy&quot;:&quot;Attorney&quot;}]\" data-aopc-requiredif=\"[{&quot;SearchBy&quot;:&quot;DateFiled&quot;},{&quot;SearchBy&quot;:&quot;Attorney&quot;,&quot;CalendarEventStartDate&quot;:&quot;&quot;},{&quot;SearchBy&quot;:&quot;Attorney&quot;,&quot;CalendarEventEndDate&quot;:&quot;&quot;},{&quot;SearchBy&quot;:&quot;ParticipantName&quot;,&quot;County&quot;:&quot;&quot;,&quot;CaseStatus&quot;:&quot;&quot;,&quot;DocketType&quot;:&quot;&quot;},{&quot;SearchBy&quot;:&quot;Organization&quot;,&quot;County&quot;:&quot;&quot;,&quot;CaseCategory&quot;:&quot;&quot;,&quot;CaseStatus&quot;:&quot;&quot;,&quot;DocketType&quot;:&quot;&quot;}]\" name=\"FiledEndDate\" placeholder=\"mm/dd/yyyy\" title=\"Date Filed End Date\" type=\"date\" min=\"1899-01-01\" max=\"2026-11-06\" required=\"required\" style=\"\">",
+      "options": []
+    },
+    {
+      "tag": "BUTTON",
+      "id": "btnSearch",
+      "name": "",
+      "outer": "<button id=\"btnSearch\" value=\"Search\">Search</button>",
+      "options": []
+    },
+    {
+      "tag": "BUTTON",
+      "id": "btnReset",
+      "name": "",
+      "outer": "<button id=\"btnReset\" type=\"Reset\" value=\"Clear\">Clear</button>",
+      "options": []
+    }
+  ]
+}

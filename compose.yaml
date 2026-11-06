@@ -1,0 +1,81 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: pa_docket
+      POSTGRES_USER: pa_docket
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pa_docket -d pa_docket"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 768m
+
+  migrate:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://pa_docket:${POSTGRES_PASSWORD}@db:5432/pa_docket
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    mem_limit: 128m
+
+  app:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://pa_docket:${POSTGRES_PASSWORD}@db:5432/pa_docket
+      SESSION_HTTPS_ONLY: "true"
+    command: ["uvicorn", "pa_docket.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    expose:
+      - "8000"
+    volumes:
+      - docket_data:/app/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    mem_limit: 256m
+
+  proxy:
+    image: caddy:2-alpine
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?Set PUBLIC_HOST in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    mem_limit: 128m
+
+  worker:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://pa_docket:${POSTGRES_PASSWORD}@db:5432/pa_docket
+    command: ["pa-docket", "worker", "--watch"]
+    volumes:
+      - docket_data:/app/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    mem_limit: 512m
+    deploy:
+      replicas: 1
+
+volumes:
+  postgres_data:
+  docket_data:
+  caddy_data:
+  caddy_config:
+
